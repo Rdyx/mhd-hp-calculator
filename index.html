@@ -1,0 +1,315 @@
+<head>
+	<style>
+		#table-container {
+			max-height: 50%;
+			overflow: auto;
+			min-width: 55%;
+			margin: auto;
+			border: 1px solid black;
+		}
+		table {
+			border-collapse: collapse;
+			width: 100%;
+			text-align: center;
+		}
+
+		th,
+		td {
+			padding: 5px;
+		}
+
+		.flex-input {
+			display: flex;
+			justify-content: space-between;
+			margin: 5px auto;
+		}
+
+		.betterThanPrevious {
+			background-color: #cccccc;
+		}
+
+		.moreThan430 {
+			font-weight: 900;
+			background-color: #00ddff;
+		}
+
+		.topHP {
+			font-weight: 900;
+			background-color: #ffddaa;
+		}
+
+		.negativeHP {
+			background-color: #ffaaaa;
+		}
+	</style>
+</head>
+<body style="display: flex; justify-content: center; flex-direction: column">
+	<form id="myForm" style="display: flex; justify-content: center; margin: auto">
+		<input type="file" id="csvFile" accept=".csv" />
+		<input type="submit" value="Submit" />
+	</form>
+
+	<div style="text-align: center; max-width: 250px; margin: 10px auto">
+		<form id="filterForm" style="margin: auto">
+			<div>
+				<label for="normalCB">Normal</label>
+				<input id="normalCB" type="checkbox" checked />
+			</div>
+			<div>
+				<label for="BTPCB">Better Than Previous</label>
+				<input id="BTPCB" type="checkbox" checked />
+			</div>
+			<div>
+				<label for="MT430CB">More than 430</label>
+				<input id="MT430CB" type="checkbox" checked />
+			</div>
+			<div>
+				<label for="TOPHPCB">Top HP</label>
+				<input id="TOPHPCB" type="checkbox" checked />
+			</div>
+			<div>
+				<label for="NHPCB">Negative HP</label>
+				<input id="NHPCB" type="checkbox" checked />
+			</div>
+			<div class="flex-input">
+				<label for="minNm">Min Nm</label>
+				<input id="minNm" type="number" min="-100" max="1000" value="-100" />
+			</div>
+			<div class="flex-input">
+				<label for="maxNm">Max Nm</label>
+				<input id="maxNm" type="number" min="0" max="1000" value="1000" />
+			</div>
+			<div class="flex-input">
+				<label for="minRPM">Min RPM</label>
+				<input id="minRPM" type="number" min="0" max="10000" value="0" />
+			</div>
+			<div class="flex-input">
+				<label for="maxRPM">Max RPM</label>
+				<input id="maxRPM" type="number" min="0" max="10000" value="10000" />
+			</div>
+			<div class="flex-input">
+				<label for="minHP">Min HP</label>
+				<input id="minHP" type="number" min="-100" max="1000" value="-100" />
+			</div>
+			<div class="flex-input">
+				<label for="maxHP">Max HP</label>
+				<input id="maxHP" type="number" min="0" max="1000" value="1000" />
+			</div>
+			<input type="submit" value="Submit" />
+		</form>
+	</div>
+	<table style="margin: 5px auto; width: 55%">
+		<thead>
+			<tr>
+				<th id="normal">Normal</th>
+				<th id="BTP">Better Than Previous</th>
+				<th id="MT430">More than 430</th>
+				<th id="TOPHP">Top</th>
+				<th id="NHP">Negative HP</th>
+			</tr>
+		</thead>
+	</table>
+
+	<div id="table-container">
+		<table id="myTable">
+			<thead></thead>
+			<tbody></tbody>
+		</table>
+	</div>
+	<script>
+		const myForm = document.getElementById("myForm");
+		const filterForm = document.getElementById("filterForm");
+		const csvFile = document.getElementById("csvFile");
+
+		var BASE_DATA = "";
+
+		// Basic html init
+		document.onreadystatechange = () => {
+			document.getElementById("BTP").style.backgroundColor = "CCCCCC";
+			document.getElementById("MT430").style.backgroundColor = "00DDFF";
+			document.getElementById("TOPHP").style.backgroundColor = "FFDDAA";
+			document.getElementById("NHP").style.backgroundColor = "ffaaaa";
+		};
+
+		function csvToArray(str, delimiter = ",") {
+			// slice from start of text to the first \n index
+			// use split to create an array from string by delimiter
+			const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
+
+			// slice from \n index + 1 to the end of the text
+			// use split to create an array of each csv value row
+			const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+
+			// Map the rows
+			// split values from each row into an array
+			// use headers.reduce to create an object
+			// object properties derived from headers:values
+			// the object passed as an element of the array
+			const arr = rows.map(function (row, rowIndex) {
+				const values = row.split(delimiter);
+				const el = headers.reduce(function (object, header, index) {
+					// console.log(header, index, values[index])
+					if (index === 0) {
+						object["Row Number"] = rowIndex;
+					}
+					if (
+						[
+							"Time",
+							"Torque act. clutch (Nm)",
+							"RPM (rpm)",
+							"Speed (km/h)",
+							"IAT (*C)",
+							"Transmission temp (*C)",
+							"Coolant (*C)",
+							"Oil temp (*C)",
+							"Gear (-)",
+							"Boost target (PSI)",
+							"Boost (PSI)",
+						].includes(header)
+					) {
+						object[header] = values[index];
+						if (header === "Torque act. clutch (Nm)") {
+							object["hp"] = (Math.round(((values[index] * object["RPM (rpm)"]) / 7127) * 100) / 100).toString();
+						}
+						return object;
+					} else {
+						return object;
+					}
+				}, {});
+				return el;
+			});
+
+			// return the array
+			return arr;
+		}
+
+		function addCellAndText(tableRow, str) {
+			const newCell = tableRow.insertCell();
+			const newText = document.createTextNode(str);
+			newCell.appendChild(newText);
+		}
+
+		function removeHTMLCollectionItems(HTMLCollection) {
+			for (var i = HTMLCollection.length - 1; i >= 0; i--) {
+				HTMLCollection[i].remove();
+			}
+		}
+
+		function setHTMLTable(data) {
+			const theadRef = document.getElementById("myTable").getElementsByTagName("thead")[0];
+			const tbodyRef = document.getElementById("myTable").getElementsByTagName("tbody")[0];
+			// Reset table
+			theadRef.innerHTML = "";
+			tbodyRef.innerHTML = "";
+
+			let prevHP = 0;
+			let topHP = 0;
+			let topHProwIndex = "r0";
+
+			const headersRow = theadRef.insertRow();
+			headersRow.id = "r-1";
+			Object.keys(data[0]).forEach((x) => {
+				addCellAndText(headersRow, x);
+			});
+			data.forEach((x, index) => {
+				if (x["hp"] > -1000) {
+					const newRow = tbodyRef.insertRow();
+					newRow.id = `r${index}`;
+
+					Object.keys(x).map((y) => {
+						addCellAndText(newRow, x[y]);
+
+						if (y === "hp") {
+							const currHP = parseFloat(x[y]);
+							newRow.classList = ["normal"];
+
+							// Negative value: red (brake or no acceleration)
+							if (currHP < 0) {
+								newRow.classList = ["negativeHP"];
+							}
+							// Better than previous: grey
+							if (currHP > prevHP) {
+								newRow.classList = ["betterThanPrevious"];
+							}
+
+							// > 430: blue & bold
+							if (currHP > 430) {
+								newRow.classList = ["moreThan430"];
+							}
+
+							// New top: old top grey, new top gold
+							if (currHP > topHP) {
+								const topHProw = document.getElementById(topHProwIndex);
+								topHProw.classList = topHP > 430 ? ["moreThan430"] : ["betterThanPrevious"];
+								topHProwIndex = newRow.id;
+
+								topHP = currHP;
+								newRow.classList = ["topHP"];
+							}
+							prevHP = currHP;
+						}
+					});
+				}
+			});
+		}
+
+		function getFilteredData(data, minNm, maxNm, minRPM, maxRPM, minHP, maxHP) {
+			data = data.filter((x) => {
+				const rpm = parseFloat(x["RPM (rpm)"]);
+				const nm = parseFloat(x["Torque act. clutch (Nm)"]);
+				const hp = parseFloat(x["hp"]);
+
+				return rpm > minRPM && rpm < maxRPM && nm > minNm && nm < maxNm && hp > minHP && hp < maxHP;
+			});
+
+			return data;
+		}
+
+		myForm.addEventListener("submit", function (e) {
+			e.preventDefault();
+			const input = csvFile.files[0];
+			const reader = new FileReader();
+
+			reader.onload = function (e) {
+				BASE_DATA = e.target.result;
+				setHTMLTable(csvToArray(BASE_DATA));
+			};
+			reader.readAsText(input);
+		});
+
+		filterForm.addEventListener("submit", (e) => {
+			e.preventDefault();
+
+			const normalCB = document.getElementById("normalCB").checked;
+			const BTPCB = document.getElementById("BTPCB").checked;
+			const MT430CB = document.getElementById("MT430CB").checked;
+			const TOPHPCB = document.getElementById("TOPHPCB").checked;
+			const NHPCB = document.getElementById("NHPCB").checked;
+			const minNm = document.getElementById("minNm").value;
+			const maxNm = document.getElementById("maxNm").value;
+			const minRPM = document.getElementById("minRPM").value;
+			const maxRPM = document.getElementById("maxRPM").value;
+			const minHP = document.getElementById("minHP").value;
+			const maxHP = document.getElementById("maxHP").value;
+
+			const data = getFilteredData(csvToArray(BASE_DATA), minNm, maxNm, minRPM, maxRPM, minHP, maxHP);
+			setHTMLTable(data);
+
+			if (!normalCB) {
+				removeHTMLCollectionItems(document.getElementsByClassName("normal"));
+			}
+			if (!BTPCB) {
+				removeHTMLCollectionItems(document.getElementsByClassName("betterThanPrevious"));
+			}
+			if (!MT430CB) {
+				removeHTMLCollectionItems(document.getElementsByClassName("moreThan430"));
+			}
+			if (!TOPHPCB) {
+				removeHTMLCollectionItems(document.getElementsByClassName("topHP"));
+			}
+			if (!NHPCB) {
+				removeHTMLCollectionItems(document.getElementsByClassName("negativeHP"));
+			}
+		});
+	</script>
+</body>
