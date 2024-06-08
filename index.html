@@ -53,11 +53,11 @@
 		<form id="filterForm" style="margin: auto">
 			<div>
 				<label for="normalCB">Normal</label>
-				<input id="normalCB" type="checkbox" checked />
+				<input id="normalCB" type="checkbox" />
 			</div>
 			<div>
 				<label for="BTPCB">Better Than Previous</label>
-				<input id="BTPCB" type="checkbox" checked />
+				<input id="BTPCB" type="checkbox" />
 			</div>
 			<div>
 				<label for="MT430CB">More than 430</label>
@@ -69,7 +69,7 @@
 			</div>
 			<div>
 				<label for="NHPCB">Negative HP</label>
-				<input id="NHPCB" type="checkbox" checked />
+				<input id="NHPCB" type="checkbox" />
 			</div>
 			<div class="flex-input">
 				<label for="minNm">Min Nm</label>
@@ -132,6 +132,7 @@
 		};
 
 		function csvToArray(str, delimiter = ",") {
+			str = str.replace(/^#\w.*\n/gm, "");
 			// slice from start of text to the first \n index
 			// use split to create an array from string by delimiter
 			const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
@@ -148,7 +149,7 @@
 			const arr = rows.map(function (row, rowIndex) {
 				const values = row.split(delimiter);
 				const el = headers.reduce(function (object, header, index) {
-					// console.log(header, index, values[index])
+					// console.log(header, index, values[index]);
 					if (index === 0) {
 						object["Row Number"] = rowIndex;
 					}
@@ -265,21 +266,7 @@
 			return data;
 		}
 
-		myForm.addEventListener("submit", function (e) {
-			e.preventDefault();
-			const input = csvFile.files[0];
-			const reader = new FileReader();
-
-			reader.onload = function (e) {
-				BASE_DATA = e.target.result;
-				setHTMLTable(csvToArray(BASE_DATA));
-			};
-			reader.readAsText(input);
-		});
-
-		filterForm.addEventListener("submit", (e) => {
-			e.preventDefault();
-
+		function drawHTMLTable() {
 			const normalCB = document.getElementById("normalCB").checked;
 			const BTPCB = document.getElementById("BTPCB").checked;
 			const MT430CB = document.getElementById("MT430CB").checked;
@@ -310,6 +297,23 @@
 			if (!NHPCB) {
 				removeHTMLCollectionItems(document.getElementsByClassName("negativeHP"));
 			}
+		}
+
+		myForm.addEventListener("submit", function (e) {
+			e.preventDefault();
+			const input = csvFile.files[0];
+			const reader = new FileReader();
+
+			reader.onload = function (e) {
+				BASE_DATA = e.target.result;
+				drawHTMLTable();
+			};
+			reader.readAsText(input);
+		});
+
+		filterForm.addEventListener("submit", (e) => {
+			e.preventDefault();
+			drawHTMLTable();
 		});
 	</script>
 </body>
